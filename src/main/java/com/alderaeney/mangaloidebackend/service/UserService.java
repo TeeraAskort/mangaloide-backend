@@ -1,0 +1,46 @@
+package com.alderaeney.mangaloidebackend.service;
+
+import java.util.List;
+import java.util.Optional;
+
+import com.alderaeney.mangaloidebackend.model.User;
+import com.alderaeney.mangaloidebackend.repository.UserRepository;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+@Service
+public class UserService implements UserDetailsService {
+
+    private final UserRepository repository;
+
+    @Autowired
+    public UserService(UserRepository repository) {
+        this.repository = repository;
+    }
+
+    public Optional<User> getUserById(Long id) {
+        return repository.findById(id);
+    }
+
+    public void removeUserById(Long id) {
+        repository.deleteById(id);
+    }
+
+    public List<User> getAllUsers() {
+        return repository.findAll();
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        Optional<User> user = repository.findByName(username);
+        if (user.isPresent()) {
+            return user.get();
+        }
+        return null;
+    }
+
+}
