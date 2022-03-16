@@ -7,6 +7,8 @@ import com.alderaeney.mangaloidebackend.model.User;
 import com.alderaeney.mangaloidebackend.repository.UserRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -32,6 +34,15 @@ public class UserService implements UserDetailsService {
 
     public List<User> getAllUsers() {
         return repository.findAll();
+    }
+
+    public Page<User> findAllByNameContaining(String name, int page) {
+        Pageable pageable = PageRequest.of(page, 10);
+        return repository.findByNameIgnoreCaseContaining(name, pageable);
+    }
+
+    public User addUser(User user) {
+        return repository.save(user);
     }
 
     @Override
