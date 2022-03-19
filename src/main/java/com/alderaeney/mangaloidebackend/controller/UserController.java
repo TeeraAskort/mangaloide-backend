@@ -3,12 +3,15 @@ package com.alderaeney.mangaloidebackend.controller;
 import java.util.List;
 import java.util.Optional;
 
+import javax.transaction.Transactional;
+
 import com.alderaeney.mangaloidebackend.exceptions.PasswordsDoNotMatchException;
 import com.alderaeney.mangaloidebackend.exceptions.UserByUsernameNotFound;
+import com.alderaeney.mangaloidebackend.model.User;
+import com.alderaeney.mangaloidebackend.model.util.UserChangePassword;
 import com.alderaeney.mangaloidebackend.model.util.UserCreate;
 import com.alderaeney.mangaloidebackend.service.UserService;
 
-import org.apache.tomcat.jni.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -26,13 +29,6 @@ public class UserController {
 
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
-
-    private final String IMAGESPATH = "userImages/";
-
-    private final List<String> ALLOWEDIMAGETYPES = List.of("image/png", "image/jpg", "image/jpeg",
-            "image/gif");
-
-    private final Integer MAXIMAGESIZE = 1048576;
 
     @Autowired
     public UserController(UserService userService, PasswordEncoder passwordEncoder) {
@@ -53,7 +49,7 @@ public class UserController {
     }
 
     @PostMapping(value = "create")
-    public User creat(@RequestBody UserCreate userData) {
+    public User create(@RequestBody UserCreate userData) {
         Optional<User> userByName = userService.findByName(userData.getName());
         if (userByName.isPresent()) {
             throw new UsernameTakenException(userData.getName());
@@ -68,4 +64,27 @@ public class UserController {
         }
     }
 
+    @PostMapping(value = "changePassword")
+    @Transactional
+    public User changePassword(@RequestBody UserChangePassword passwords) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        Optional<User> user = playerService.findPlayerByName(username);
+
+        if (user.isPresent()) {
+            User us = user.get();
+            if (passwordEncoder.matches(passwords.getOldPass(), us.getPassword())) {
+                if (passwords.getNewPass().equals(passwords.getNewPassRepeat())) {
+                    us.setPassword(passwordEncoder.encode(passwords.getNewPass()));
+                    return us;
+                } else {
+                    throw new PasswordsDoNotMatchException();
+                }
+            } else {
+                throw new OldPasswordDoesNotMatchException();
+            }
+        } else {
+            throw new UserByUsernameNotFound(username);
+        }
+    }
 }

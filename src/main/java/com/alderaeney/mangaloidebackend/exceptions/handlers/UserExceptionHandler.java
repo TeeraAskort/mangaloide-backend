@@ -1,5 +1,6 @@
 package com.alderaeney.mangaloidebackend.exceptions.handlers;
 
+import com.alderaeney.mangaloidebackend.exceptions.OldPasswordDoesNotMatchException;
 import com.alderaeney.mangaloidebackend.exceptions.PasswordsDoNotMatchException;
 import com.alderaeney.mangaloidebackend.exceptions.UserByUsernameNotFound;
 import com.alderaeney.mangaloidebackend.exceptions.UsernameTakenException;
@@ -25,5 +26,9 @@ public class UserExceptionHandler {
     public ResponseEntity<Object> passwordsDoNotMatchException(PasswordsDoNotMatchException exception) {
         return new ResponseEntity<>(exception.msg, HttpStatus.NOT_FOUND);
     }
-}
+
+    @ExceptionHandler(value = OldPasswordDoesNotMatchException.class)
+    public ResponseEntity<Object> oldPasswordDoesNotMatchException(OldPasswordDoesNotMatchException exception) {
+        return new ResponseEntity<>(exception.msg, HttpStatus.NOT_FOUND);
+    }
 }

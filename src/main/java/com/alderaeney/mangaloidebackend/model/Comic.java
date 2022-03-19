@@ -29,6 +29,14 @@ public class Comic {
     @Column(name = "comic_id")
     private Long id;
 
+    private String name;
+
+    private String author;
+
+    private Boolean finished;
+
+    private Boolean nsfw;
+
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "comic")
     private List<Chapter> chapters;
 

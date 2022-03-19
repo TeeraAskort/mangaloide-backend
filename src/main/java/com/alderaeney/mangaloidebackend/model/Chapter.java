@@ -22,6 +22,10 @@ public class Chapter {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private Double number;
+
+    private String name;
+
     private Long pages;
 
     private Long number;
