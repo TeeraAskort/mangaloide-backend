@@ -28,6 +28,10 @@ public class ChapterService {
         return repository.findAllByComic(comic, pageable);
     }
 
+    public Optional<Chapter> findByComicAndNumber(Comic comic, Long number) {
+        return repository.findByComicAndNumber(comic, number);
+    }
+
     public void addChapter(Chapter chapter) {
         repository.save(chapter);
     }
