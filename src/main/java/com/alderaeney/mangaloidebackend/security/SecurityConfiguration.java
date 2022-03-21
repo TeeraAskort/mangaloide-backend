@@ -31,8 +31,8 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         http.httpBasic();
         http.cors().and().csrf().disable();
-        http.authorizeRequests().antMatchers(HttpMethod.POST, "/api/v1/user/create").permitAll()
-                .antMatchers(HttpMethod.GET, "/api/v1/player/login").permitAll();
+        http.authorizeRequests().antMatchers(HttpMethod.POST, "/api/v1/comic/{id}/uploadChapter").authenticated()
+                .antMatchers(HttpMethod.POST, "/api/v1/user/changePassword").authenticated().anyRequest().permitAll();
     }
 
     @Bean

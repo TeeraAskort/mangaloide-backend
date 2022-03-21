@@ -121,6 +121,11 @@ public class ComicController {
         return new ResponseEntity<>(image, headers, HttpStatus.OK);
     }
 
+    @GetMapping("search/{name}")
+    public SendPage<Comic> searchComic(@PathVariable("name") String name) {
+
+    }
+
     private String unzipFile(MultipartFile chapterZip, String comicName, Long number) {
         try {
             List<String> images = new ArrayList<>();
