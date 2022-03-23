@@ -1,6 +1,9 @@
 package com.alderaeney.mangaloidebackend.exceptions.handlers;
 
 import com.alderaeney.mangaloidebackend.exceptions.CannotConvertImageException;
+import com.alderaeney.mangaloidebackend.exceptions.CannotDeleteFolderException;
+import com.alderaeney.mangaloidebackend.exceptions.CannotReadImageException;
+import com.alderaeney.mangaloidebackend.exceptions.ChapterNotFoundException;
 import com.alderaeney.mangaloidebackend.exceptions.ChapterNotUploaded;
 import com.alderaeney.mangaloidebackend.exceptions.ComicNotFoundException;
 import com.alderaeney.mangaloidebackend.exceptions.FileTypeNotAllowed;
@@ -37,5 +40,21 @@ public class ComicExceptionHandler {
     @ExceptionHandler(value = CannotConvertImageException.class)
     public ResponseEntity<Object> cannotConvertImageException(CannotConvertImageException exception) {
         return new ResponseEntity<>(exception.msg, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(value = CannotReadImageException.class)
+    public ResponseEntity<Object> cannotReadImageException(CannotReadImageException exception) {
+        return new ResponseEntity<>(exception.msg, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(value = CannotDeleteFolderException.class)
+    public ResponseEntity<Object> cannotDeleteFolderException(CannotDeleteFolderException exception) {
+        return new ResponseEntity<>(exception.msg, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(value = ChapterNotFoundException.class)
+    public ResponseEntity<Object> chapterNotFoundException(ChapterNotFoundException exception) {
+        return new ResponseEntity<>("Chapter number " + exception.number + " not found on the database",
+                HttpStatus.NOT_FOUND);
     }
 }

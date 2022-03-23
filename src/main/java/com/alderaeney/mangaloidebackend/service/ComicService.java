@@ -7,8 +7,9 @@ import com.alderaeney.mangaloidebackend.model.Comic;
 import com.alderaeney.mangaloidebackend.repository.ComicRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.data.web.SpringDataWebProperties.Pageable;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -29,7 +30,7 @@ public class ComicService {
         return repository.findAll();
     }
 
-    public findAllByNameContaining(String name, int page) {
+    public Page<Comic> findAllByNameContaining(String name, int page) {
         Pageable pageable = PageRequest.of(page, 10);
         return repository.findByNameIgnoreCaseContaining(name, pageable);
     }

@@ -15,7 +15,4 @@ public interface ComicRepository extends JpaRepository<Comic, Long> {
     public Page<Comic> findByNameIgnoreCaseContaining(String name, Pageable pageable);
 
     public Optional<Comic> findByName(String name);
-
-    public Optional<Comic> findByName(String name);
-
 }

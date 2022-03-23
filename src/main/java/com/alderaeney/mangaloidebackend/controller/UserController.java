@@ -5,8 +5,10 @@ import java.util.Optional;
 
 import javax.transaction.Transactional;
 
+import com.alderaeney.mangaloidebackend.exceptions.OldPasswordDoesNotMatchException;
 import com.alderaeney.mangaloidebackend.exceptions.PasswordsDoNotMatchException;
 import com.alderaeney.mangaloidebackend.exceptions.UserByUsernameNotFound;
+import com.alderaeney.mangaloidebackend.exceptions.UsernameTakenException;
 import com.alderaeney.mangaloidebackend.model.User;
 import com.alderaeney.mangaloidebackend.model.util.UserChangePassword;
 import com.alderaeney.mangaloidebackend.model.util.UserCreate;
@@ -55,7 +57,7 @@ public class UserController {
             throw new UsernameTakenException(userData.getName());
         } else {
             if (userData.getPassword().equals(userData.getPasswordRepeat())) {
-                User user = new User(userData.getName(), passwordEncoder.encode(userData.getPassword());
+                User user = new User(userData.getName(), passwordEncoder.encode(userData.getPassword()));
                 user.setAuthorities(List.of(new SimpleGrantedAuthority("USER")));
                 return userService.addUser(user);
             } else {
@@ -69,7 +71,7 @@ public class UserController {
     public User changePassword(@RequestBody UserChangePassword passwords) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
-        Optional<User> user = playerService.findPlayerByName(username);
+        Optional<User> user = userService.findByName(username);
 
         if (user.isPresent()) {
             User us = user.get();

@@ -1,5 +1,8 @@
 package com.alderaeney.mangaloidebackend.mapper;
 
+import java.util.List;
+
+import com.alderaeney.mangaloidebackend.model.User;
 import com.alderaeney.mangaloidebackend.model.dto.UserList;
 
 import org.mapstruct.Mapper;
@@ -12,4 +15,8 @@ public interface UserMapper {
     UserList userToUserList(User user);
 
     User userListToUser(UserList user);
+
+    List<User> usersListToUsers(List<UserList> users);
+
+    List<UserList> usersToUsersList(List<User> users);
 }

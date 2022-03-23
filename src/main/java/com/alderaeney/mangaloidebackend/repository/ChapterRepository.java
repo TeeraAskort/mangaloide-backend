@@ -1,6 +1,9 @@
 package com.alderaeney.mangaloidebackend.repository;
 
+import java.util.Optional;
+
 import com.alderaeney.mangaloidebackend.model.Chapter;
+import com.alderaeney.mangaloidebackend.model.Comic;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

@@ -19,10 +19,23 @@ import javax.imageio.ImageIO;
 import javax.transaction.Transactional;
 
 import com.alderaeney.mangaloidebackend.exceptions.CannotConvertImageException;
+import com.alderaeney.mangaloidebackend.exceptions.CannotDeleteFolderException;
+import com.alderaeney.mangaloidebackend.exceptions.CannotReadImageException;
+import com.alderaeney.mangaloidebackend.exceptions.ChapterNotFoundException;
 import com.alderaeney.mangaloidebackend.exceptions.ChapterNotUploaded;
+import com.alderaeney.mangaloidebackend.exceptions.ComicNotFoundException;
+import com.alderaeney.mangaloidebackend.exceptions.FileTypeNotAllowed;
+import com.alderaeney.mangaloidebackend.exceptions.InvalidZipFile;
+import com.alderaeney.mangaloidebackend.exceptions.UserByUsernameNotFound;
+import com.alderaeney.mangaloidebackend.mapper.ChapterMapper;
+import com.alderaeney.mangaloidebackend.mapper.ComicMapper;
 import com.alderaeney.mangaloidebackend.model.Chapter;
 import com.alderaeney.mangaloidebackend.model.Comic;
+import com.alderaeney.mangaloidebackend.model.SendPage;
 import com.alderaeney.mangaloidebackend.model.User;
+import com.alderaeney.mangaloidebackend.model.dto.ChapterView;
+import com.alderaeney.mangaloidebackend.model.dto.ComicList;
+import com.alderaeney.mangaloidebackend.model.dto.ComicView;
 import com.alderaeney.mangaloidebackend.model.util.ChapterUpload;
 import com.alderaeney.mangaloidebackend.service.ChapterService;
 import com.alderaeney.mangaloidebackend.service.ComicService;
@@ -30,6 +43,7 @@ import com.alderaeney.mangaloidebackend.service.UserService;
 
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -74,6 +88,13 @@ public class ComicController {
         this.userService = userService;
     }
 
+    @GetMapping("search/{name}/{page}")
+    public SendPage<ComicList> searchComic(@PathVariable("name") String name, @PathVariable("page") Integer pageN) {
+        Page<Comic> page = comicService.findAllByNameContaining(name, pageN);
+        return new SendPage<ComicList>(page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages(),
+                ComicMapper.INSTANCE.comicsToComicsList(page.getContent()), page.getSort());
+    }
+
     @PostMapping(path = "{id}/uploadChapter", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Transactional
     public void uploadChapter(@PathVariable("id") Long id, @RequestBody ChapterUpload chapterUpload) {
@@ -87,15 +108,16 @@ public class ComicController {
                 Comic com = comic.get();
                 try {
                     if (chapterUpload.getChapterZip().getContentType().equals(ALLOWEDFILETYPE)) {
-                        List<String> imagesPath = this.unzipFile(chapterZip, com.getName(), chapterUpload.getNumber());
-                        String path = COMICSPATH + com.getName() + "/" + chapterUpload.getNumber();
+                        List<String> imagesPath = this.unzipFile(chapterUpload.getChapterZip(), com.getName(),
+                                chapterUpload.getNumber());
+                        String path = COMICSPATH + com.getName() + File.separator + chapterUpload.getNumber();
                         this.convertFilesToJPG(imagesPath, path);
-                        Chapter chapter = new Chapter(chapterUpload.getNumber(),
-                                chapterUpload.getName().isEmpty() ? null : chapterUpload.getName(), imagesPath.size(),
+                        String name = chapterUpload.getName().isEmpty() ? null : chapterUpload.getName();
+                        Chapter chapter = new Chapter(chapterUpload.getNumber(), name, Long.valueOf(imagesPath.size()),
                                 us.getName(), com);
                         chapterService.addChapter(chapter);
                     } else {
-                        throw new FileTypeNotAllowed(chapterZip.getContentType());
+                        throw new FileTypeNotAllowed(chapterUpload.getChapterZip().getContentType());
                     }
                 } catch (NullPointerException e) {
                     throw new ChapterNotUploaded();
@@ -108,34 +130,79 @@ public class ComicController {
         }
     }
 
+    @GetMapping("{id}/chapter/{number}/read")
+    @Transactional
+    public User readChapter(@PathVariable("id") Long id, @PathVariable("number") Long number) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        Optional<User> user = userService.findByName(username);
+        if (user.isPresent()) {
+            User us = user.get();
+            Optional<Comic> comic = comicService.getComicById(id);
+            if (comic.isPresent()) {
+                Comic com = comic.get();
+                Optional<Chapter> chapter = chapterService.findByComicAndNumber(com, number);
+                if (chapter.isPresent()) {
+                    Chapter chap = chapter.get();
+                    chap.getUsersCompleted().add(us);
+                    us.getChaptersRead().add(chap);
+                    return us;
+                } else {
+                    throw new ChapterNotFoundException(number);
+                }
+            } else {
+                throw new ComicNotFoundException(id);
+            }
+        } else {
+            throw new UserByUsernameNotFound(username);
+        }
+    }
+
+    @GetMapping("{id}/chapter/{number}/fetch")
+    public ChapterView fetchChapterData(@PathVariable("id") Long id, @PathVariable("number") Long number) {
+        Optional<Comic> comic = comicService.getComicById(id);
+        if (comic.isPresent()) {
+            Comic com = comic.get();
+            Optional<Chapter> chapter = chapterService.findByComicAndNumber(com, number);
+            if (chapter.isPresent()) {
+                return ChapterMapper.INSTANCE.chapterToChapterView(chapter.get());
+            } else {
+                throw new ChapterNotFoundException(number);
+            }
+        } else {
+            throw new ComicNotFoundException(id);
+        }
+    }
+
     @GetMapping("{id}/chapter/{chNumber}/{imgNumber}")
     public ResponseEntity<byte[]> serveChapterImage(@PathVariable("id") Long id,
             @PathVariable("chNumber") Long chNumber, @PathVariable("imgNumber") Long imgNumber) {
-        Optional<Comic> comic = comicService.getComicById(id);
-        Path path = Paths.get(
-                COMICSPATH + comic.get().getName() + File.separator + chNumber + File.separator + imgNumber + ".jpg");
-        byte[] image = Files.readAllBytes(path);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.IMAGE_JPEG);
-        headers.setContentLength(image.length);
-        return new ResponseEntity<>(image, headers, HttpStatus.OK);
+        try {
+            Optional<Comic> comic = comicService.getComicById(id);
+            Path path = Paths.get(
+                    COMICSPATH + comic.get().getName() + File.separator + chNumber + File.separator + imgNumber
+                            + ".jpg");
+            byte[] image = Files.readAllBytes(path);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.IMAGE_JPEG);
+            headers.setContentLength(image.length);
+            return new ResponseEntity<>(image, headers, HttpStatus.OK);
+        } catch (IOException e) {
+            throw new CannotReadImageException();
+        }
     }
 
-    @GetMapping("search/{name}")
-    public SendPage<Comic> searchComic(@PathVariable("name") String name) {
-
-    }
-
-    private String unzipFile(MultipartFile chapterZip, String comicName, Long number) {
+    private List<String> unzipFile(MultipartFile chapterZip, String comicName, Double number) {
         try {
             List<String> images = new ArrayList<>();
             ZipInputStream zis = new ZipInputStream(chapterZip.getInputStream());
-            File tmpFolder = TMPPATH + File.separator + comicName + "-" + number;
+            File tmpFolder = new File(TMPPATH + File.separator + comicName + "-" + number);
             if (!tmpFolder.exists()) {
                 tmpFolder.mkdir();
             }
             ZipEntry entry = zis.getNextEntry();
             MimetypesFileTypeMap mtft = new MimetypesFileTypeMap();
+            byte[] buffer = new byte[1024];
             while (entry != null) {
                 boolean isAllowed = false;
                 for (String type : ALLOWEDIMAGETYPES) {
@@ -147,7 +214,13 @@ public class ComicController {
                 if (isAllowed) {
                     String imagePath = tmpFolder + File.separator + entry.getName();
                     images.add(imagePath);
-                    Files.copy(entry, imagePath, StandardCopyOption.REPLACE_EXISTING);
+                    File newFile = new File(imagePath);
+                    FileOutputStream fos = new FileOutputStream(newFile);
+                    int len;
+                    while ((len = zis.read(buffer)) > 0) {
+                        fos.write(buffer, 0, len);
+                    }
+                    fos.close();
                 }
                 entry = zis.getNextEntry();
             }
@@ -155,6 +228,60 @@ public class ComicController {
             return images;
         } catch (IOException e) {
             throw new InvalidZipFile();
+        }
+    }
+
+    @GetMapping("{id}/follow")
+    @Transactional
+    public User followComic(@PathVariable("id") Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        Optional<User> user = userService.findByName(username);
+        if (user.isPresent()) {
+            User us = user.get();
+            Optional<Comic> comic = comicService.getComicById(id);
+            if (comic.isPresent()) {
+                Comic com = comic.get();
+                com.getUsersFollowing().add(us);
+                us.getComicsFollowing().add(com);
+                return us;
+            } else {
+                throw new ComicNotFoundException(id);
+            }
+        } else {
+            throw new UserByUsernameNotFound(username);
+        }
+    }
+
+    @GetMapping("{id}/fetch")
+    public ComicView fetchComicData(@PathVariable("id") Long id) {
+        Optional<Comic> comic = comicService.getComicById(id);
+        if (comic.isPresent()) {
+            return ComicMapper.INSTANCE.comicToComicView(comic.get());
+        } else {
+            throw new ComicNotFoundException(id);
+        }
+    }
+
+    @GetMapping("{id}/unfollow")
+    @Transactional
+    public User unfollowComic(@PathVariable("id") Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        Optional<User> user = userService.findByName(username);
+        if (user.isPresent()) {
+            User us = user.get();
+            Optional<Comic> comic = comicService.getComicById(id);
+            if (comic.isPresent()) {
+                Comic com = comic.get();
+                com.getUsersFollowing().remove(us);
+                us.getComicsFollowing().remove(com);
+                return us;
+            } else {
+                throw new ComicNotFoundException(id);
+            }
+        } else {
+            throw new UserByUsernameNotFound(username);
         }
     }
 
@@ -186,7 +313,11 @@ public class ComicController {
     }
 
     private void deleteTmpFolder(String comicName, Long number) {
-        File tmpFolder = TMPPATH + File.separator + comicName + "-" + number;
-        FileUtils.deleteDirectory(tmpFolder);
+        try {
+            File tmpFolder = new File(TMPPATH + File.separator + comicName + "-" + number);
+            FileUtils.deleteDirectory(tmpFolder);
+        } catch (IOException e) {
+            throw new CannotDeleteFolderException();
+        }
     }
 }

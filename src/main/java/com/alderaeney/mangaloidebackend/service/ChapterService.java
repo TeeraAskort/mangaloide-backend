@@ -1,6 +1,9 @@
 package com.alderaeney.mangaloidebackend.service;
 
+import java.util.Optional;
+
 import com.alderaeney.mangaloidebackend.model.Chapter;
+import com.alderaeney.mangaloidebackend.model.Comic;
 import com.alderaeney.mangaloidebackend.repository.ChapterRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
