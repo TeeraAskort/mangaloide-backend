@@ -1,6 +1,4 @@
-package com.alderaeney.mangaloidebackend.model.dto;
-
-import java.io.Serializable;
+package com.alderaeney.mangaloidebackend.model.util;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,8 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ComicList implements Serializable {
-    private static final long serialVersionUID = 1L;
+public class NewComic {
     private String name;
     private String author;
     private Boolean nsfw;

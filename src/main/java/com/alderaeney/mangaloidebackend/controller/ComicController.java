@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.zip.ZipEntry;
@@ -37,6 +38,7 @@ import com.alderaeney.mangaloidebackend.model.dto.ChapterView;
 import com.alderaeney.mangaloidebackend.model.dto.ComicList;
 import com.alderaeney.mangaloidebackend.model.dto.ComicView;
 import com.alderaeney.mangaloidebackend.model.util.ChapterUpload;
+import com.alderaeney.mangaloidebackend.model.util.NewComic;
 import com.alderaeney.mangaloidebackend.service.ChapterService;
 import com.alderaeney.mangaloidebackend.service.ComicService;
 import com.alderaeney.mangaloidebackend.service.UserService;
@@ -51,14 +53,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.function.ServerRequest.Headers;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -67,25 +70,27 @@ import java.awt.image.BufferedImage;
 @RequestMapping(path = "api/v1/comic")
 public class ComicController {
 
+    @Autowired
     private ComicService comicService;
+    @Autowired
     private ChapterService chapterService;
+    @Autowired
     private UserService userService;
 
-    private final String COMICSPATH = "comics" + File.separator;
+    private static final String COMICSPATH = "comics" + File.separator;
 
-    private final String TMPPATH = "tmp" + File.separator;
+    private static final String TMPPATH = "tmp" + File.separator;
 
-    private final List<String> ALLOWEDIMAGETYPES = List.of("image/png", "image/jpg", "image/jpeg", "image/gif");
+    private final List<String> ALLOWEDIMAGETYPES = Arrays.asList("image/png", "image/jpg", "image/jpeg",
+            "image/gif");
 
-    private final String ALLOWEDFILETYPE = "application/zip";
+    private static final String ALLOWEDFILETYPE = "application/zip";
 
-    private final Integer MAXFILESIZE = 31457280;
-
-    @Autowired
-    public ComicController(ComicService comicService, ChapterService chapterService, UserService userService) {
-        this.comicService = comicService;
-        this.chapterService = chapterService;
-        this.userService = userService;
+    @PostMapping("newComic")
+    public ComicView newComic(@RequestBody NewComic newComic) {
+        Comic comic = new Comic(newComic.getName(), newComic.getAuthor(), false, newComic.getNsfw());
+        Comic result = comicService.save(comic);
+        return ComicMapper.INSTANCE.comicToComicView(result);
     }
 
     @GetMapping("search/{name}/{page}")
@@ -95,9 +100,11 @@ public class ComicController {
                 ComicMapper.INSTANCE.comicsToComicsList(page.getContent()), page.getSort());
     }
 
-    @PostMapping(path = "{id}/uploadChapter", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path = "{id}/uploadChapter", headers = { "content-type=multipart/mixed",
+            "content-type=multipart/form-data" })
     @Transactional
-    public void uploadChapter(@PathVariable("id") Long id, @RequestBody ChapterUpload chapterUpload) {
+    public void uploadChapter(@PathVariable("id") Long id, @ModelAttribute ChapterUpload chapterUpload,
+            @RequestPart("chapterZip") MultipartFile chapterZip) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
         Optional<User> user = userService.findByName(username);
@@ -105,22 +112,29 @@ public class ComicController {
             User us = user.get();
             Optional<Comic> comic = comicService.getComicById(id);
             if (comic.isPresent()) {
-                Comic com = comic.get();
+                Comic comi = comic.get();
                 try {
-                    if (chapterUpload.getChapterZip().getContentType().equals(ALLOWEDFILETYPE)) {
-                        List<String> imagesPath = this.unzipFile(chapterUpload.getChapterZip(), com.getName(),
+                    if (chapterZip.getContentType().equals(ALLOWEDFILETYPE)) {
+                        List<String> imagesPath = this.unzipFile(chapterZip, comi.getName(),
                                 chapterUpload.getNumber());
-                        String path = COMICSPATH + com.getName() + File.separator + chapterUpload.getNumber();
-                        this.convertFilesToJPG(imagesPath, path);
-                        String name = chapterUpload.getName().isEmpty() ? null : chapterUpload.getName();
+                        String finalPath = COMICSPATH + comi.getName() + File.separator + chapterUpload.getNumber();
+                        Path path = Paths.get(finalPath);
+                        Files.createDirectories(path);
+                        this.convertFilesToJPG(imagesPath, finalPath);
+                        this.deleteTmpFolder(comi.getName(), chapterUpload.getNumber());
+                        String name = chapterUpload.getName().isEmpty() ? "Chapter " + chapterUpload.getNumber()
+                                : chapterUpload.getName();
                         Chapter chapter = new Chapter(chapterUpload.getNumber(), name, Long.valueOf(imagesPath.size()),
-                                us.getName(), com);
-                        chapterService.addChapter(chapter);
+                                us.getName(), comi);
+                        chapter = chapterService.addChapter(chapter);
+                        comi.getChapters().add(chapter);
                     } else {
-                        throw new FileTypeNotAllowed(chapterUpload.getChapterZip().getContentType());
+                        throw new FileTypeNotAllowed(chapterZip.getContentType());
                     }
                 } catch (NullPointerException e) {
                     throw new ChapterNotUploaded();
+                } catch (IOException e) {
+                    throw new RuntimeException(e.getMessage());
                 }
             } else {
                 throw new ComicNotFoundException(id);
@@ -176,7 +190,7 @@ public class ComicController {
 
     @GetMapping("{id}/chapter/{chNumber}/{imgNumber}")
     public ResponseEntity<byte[]> serveChapterImage(@PathVariable("id") Long id,
-            @PathVariable("chNumber") Long chNumber, @PathVariable("imgNumber") Long imgNumber) {
+            @PathVariable("chNumber") Double chNumber, @PathVariable("imgNumber") Long imgNumber) {
         try {
             Optional<Comic> comic = comicService.getComicById(id);
             Path path = Paths.get(
@@ -192,42 +206,25 @@ public class ComicController {
         }
     }
 
-    private List<String> unzipFile(MultipartFile chapterZip, String comicName, Double number) {
+    private List<String> unzipFile(MultipartFile file, String comicName, Double number) {
         try {
-            List<String> images = new ArrayList<>();
-            ZipInputStream zis = new ZipInputStream(chapterZip.getInputStream());
-            File tmpFolder = new File(TMPPATH + File.separator + comicName + "-" + number);
-            if (!tmpFolder.exists()) {
-                tmpFolder.mkdir();
-            }
-            ZipEntry entry = zis.getNextEntry();
-            MimetypesFileTypeMap mtft = new MimetypesFileTypeMap();
-            byte[] buffer = new byte[1024];
-            while (entry != null) {
-                boolean isAllowed = false;
-                for (String type : ALLOWEDIMAGETYPES) {
-                    if (mtft.getContentType(entry.getName()).equals(type)) {
-                        isAllowed = true;
-                        break;
-                    }
+            List<String> files = new ArrayList<>();
+            Path tmpFolder = Paths.get(TMPPATH + File.separator + comicName + "-" + number);
+            ZipInputStream inputStream = new ZipInputStream(file.getInputStream());
+            for (ZipEntry entry; (entry = inputStream.getNextEntry()) != null;) {
+                Path resolvedPath = tmpFolder.resolve(entry.getName());
+                if (!entry.isDirectory()) {
+                    Files.createDirectories(resolvedPath.getParent());
+                    Files.copy(inputStream, resolvedPath, StandardCopyOption.REPLACE_EXISTING);
+                    files.add(resolvedPath.toString());
+                } else {
+                    Files.createDirectories(resolvedPath);
                 }
-                if (isAllowed) {
-                    String imagePath = tmpFolder + File.separator + entry.getName();
-                    images.add(imagePath);
-                    File newFile = new File(imagePath);
-                    FileOutputStream fos = new FileOutputStream(newFile);
-                    int len;
-                    while ((len = zis.read(buffer)) > 0) {
-                        fos.write(buffer, 0, len);
-                    }
-                    fos.close();
-                }
-                entry = zis.getNextEntry();
             }
-            zis.closeEntry();
-            return images;
+
+            return files;
         } catch (IOException e) {
-            throw new InvalidZipFile();
+            throw new RuntimeException(e.getMessage());
         }
     }
 
@@ -312,7 +309,7 @@ public class ComicController {
         }
     }
 
-    private void deleteTmpFolder(String comicName, Long number) {
+    private void deleteTmpFolder(String comicName, Double number) {
         try {
             File tmpFolder = new File(TMPPATH + File.separator + comicName + "-" + number);
             FileUtils.deleteDirectory(tmpFolder);

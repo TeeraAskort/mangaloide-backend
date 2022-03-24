@@ -1,5 +1,6 @@
 package com.alderaeney.mangaloidebackend.controller;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -58,7 +59,7 @@ public class UserController {
         } else {
             if (userData.getPassword().equals(userData.getPasswordRepeat())) {
                 User user = new User(userData.getName(), passwordEncoder.encode(userData.getPassword()));
-                user.setAuthorities(List.of(new SimpleGrantedAuthority("USER")));
+                user.setAuthorities(Arrays.asList(new SimpleGrantedAuthority("USER")));
                 return userService.addUser(user);
             } else {
                 throw new PasswordsDoNotMatchException();

@@ -34,4 +34,8 @@ public class ComicService {
         Pageable pageable = PageRequest.of(page, 10);
         return repository.findByNameIgnoreCaseContaining(name, pageable);
     }
+
+    public Comic save(Comic comic) {
+        return repository.save(comic);
+    }
 }

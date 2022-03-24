@@ -35,8 +35,8 @@ public class ChapterService {
         return repository.findByComicAndNumber(comic, number);
     }
 
-    public void addChapter(Chapter chapter) {
-        repository.save(chapter);
+    public Chapter addChapter(Chapter chapter) {
+        return repository.save(chapter);
     }
 
     public void removeChapter(Chapter chapter) {

@@ -14,5 +14,5 @@ import lombok.Setter;
 public class ChapterUpload {
     private Double number;
     private String name;
-    private MultipartFile chapterZip;
+    // private MultipartFile chapterZip;
 }
