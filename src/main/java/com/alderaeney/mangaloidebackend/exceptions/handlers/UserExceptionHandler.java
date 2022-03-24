@@ -1,5 +1,6 @@
 package com.alderaeney.mangaloidebackend.exceptions.handlers;
 
+import com.alderaeney.mangaloidebackend.exceptions.FileTooBigException;
 import com.alderaeney.mangaloidebackend.exceptions.OldPasswordDoesNotMatchException;
 import com.alderaeney.mangaloidebackend.exceptions.PasswordsDoNotMatchException;
 import com.alderaeney.mangaloidebackend.exceptions.UserByUsernameNotFound;
@@ -30,5 +31,10 @@ public class UserExceptionHandler {
     @ExceptionHandler(value = OldPasswordDoesNotMatchException.class)
     public ResponseEntity<Object> oldPasswordDoesNotMatchException(OldPasswordDoesNotMatchException exception) {
         return new ResponseEntity<>(exception.msg, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(value = FileTooBigException.class)
+    public ResponseEntity<Object> fileTooBigException(FileTooBigException exception) {
+        return new ResponseEntity<>(exception.msg, HttpStatus.NOT_ACCEPTABLE)
     }
 }
