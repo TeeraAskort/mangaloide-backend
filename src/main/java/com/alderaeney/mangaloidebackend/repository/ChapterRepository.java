@@ -15,6 +15,6 @@ public interface ChapterRepository extends JpaRepository<Chapter, Long> {
 
     public Page<Chapter> findAllByComic(Comic comic, Pageable pageable);
 
-    public Optional<Chapter> findByComicAndNumber(Comic comic, Long number);
+    public Optional<Chapter> findByComicAndChNumber(Comic comic, Double chNumber);
 
 }

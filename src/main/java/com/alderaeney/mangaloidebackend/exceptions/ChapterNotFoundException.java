@@ -1,9 +1,9 @@
 package com.alderaeney.mangaloidebackend.exceptions;
 
 public class ChapterNotFoundException extends RuntimeException {
-    public Long number;
+    public Double number;
 
-    public ChapterNotFoundException(Long number) {
+    public ChapterNotFoundException(Double number) {
         this.number = number;
     }
 }

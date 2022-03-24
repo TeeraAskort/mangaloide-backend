@@ -146,7 +146,7 @@ public class ComicController {
 
     @GetMapping("{id}/chapter/{number}/read")
     @Transactional
-    public User readChapter(@PathVariable("id") Long id, @PathVariable("number") Long number) {
+    public User readChapter(@PathVariable("id") Long id, @PathVariable("number") Double number) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
         Optional<User> user = userService.findByName(username);
@@ -173,7 +173,7 @@ public class ComicController {
     }
 
     @GetMapping("{id}/chapter/{number}/fetch")
-    public ChapterView fetchChapterData(@PathVariable("id") Long id, @PathVariable("number") Long number) {
+    public ChapterView fetchChapterData(@PathVariable("id") Long id, @PathVariable("number") Double number) {
         Optional<Comic> comic = comicService.getComicById(id);
         if (comic.isPresent()) {
             Comic com = comic.get();

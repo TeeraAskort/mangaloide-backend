@@ -31,8 +31,8 @@ public class ChapterService {
         return repository.findAllByComic(comic, pageable);
     }
 
-    public Optional<Chapter> findByComicAndNumber(Comic comic, Long number) {
-        return repository.findByComicAndNumber(comic, number);
+    public Optional<Chapter> findByComicAndNumber(Comic comic, Double number) {
+        return repository.findByComicAndChNumber(comic, number);
     }
 
     public Chapter addChapter(Chapter chapter) {

@@ -29,7 +29,7 @@ public class Chapter {
     private Long id;
 
     @NonNull
-    private Double number;
+    private Double chNumber;
 
     @NonNull
     private String name;
