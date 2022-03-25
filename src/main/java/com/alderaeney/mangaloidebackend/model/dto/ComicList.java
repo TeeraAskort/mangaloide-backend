@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ComicList implements Serializable {
     private static final long serialVersionUID = 1L;
+    private Long id;
     private String name;
     private String author;
     private Boolean nsfw;
