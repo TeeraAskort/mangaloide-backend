@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -37,5 +38,10 @@ public class ComicService {
 
     public Comic save(Comic comic) {
         return repository.save(comic);
+    }
+
+    public Page<Comic> getLatestComics(Integer page) {
+        Pageable pageable = PageRequest.of(page, 30, Sort.Direction.ASC, "id");
+        return repository.findAll(pageable);
     }
 }

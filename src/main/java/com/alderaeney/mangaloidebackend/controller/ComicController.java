@@ -100,6 +100,13 @@ public class ComicController {
                 ComicMapper.INSTANCE.comicsToComicsList(page.getContent()), page.getSort());
     }
 
+    @GetMapping(path = "getLatestComics/{page}")
+    public SendPage<ComicView> getLatestComics(@PathVariable("page") Integer page) {
+        Page<Comic> comics = comicService.getLatestComics(page);
+        return new SendPage<>(comics.getNumber(), comics.getSize(), comics.getTotalElements(), comics.getTotalPages(),
+                ComicMapper.INSTANCE.comicsToComicsList(comics.getContent()), comics.getSort());
+    }
+
     @PostMapping(path = "{id}/uploadChapter", headers = { "content-type=multipart/mixed",
             "content-type=multipart/form-data" })
     @Transactional
