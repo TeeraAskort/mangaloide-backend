@@ -82,14 +82,17 @@ public class ComicController {
     private static final String TMPPATH = "tmp" + File.separator;
 
     private final List<String> ALLOWEDIMAGETYPES = Arrays.asList("image/png", "image/jpg", "image/jpeg",
-            "image/gif");
+                                                                 "image/gif");
 
     private static final String ALLOWEDFILETYPE = "application/zip";
 
-    @PostMapping("newComic")
-    public ComicView newComic(@RequestBody NewComic newComic) {
+    @PostMapping("newComic", headers = { "content-type=multipart/mixed",
+                                        "content-type=multipart/form-data" })
+                                        public ComicView newComic(@RequestBody NewComic newComic, @RequestPart("image") MultipartFile image) {
         Comic comic = new Comic(newComic.getName(), newComic.getAuthor(), false, newComic.getNsfw());
         Comic result = comicService.save(comic);
+        String path = COMICSPATH + File.separator + comicName + File.separator +  "image.jpg";
+        this.convertImageToJPG(image, path);
         return ComicMapper.INSTANCE.comicToComicView(result);
     }
 
@@ -97,21 +100,21 @@ public class ComicController {
     public SendPage<ComicList> searchComic(@PathVariable("name") String name, @PathVariable("page") Integer pageN) {
         Page<Comic> page = comicService.findAllByNameContaining(name, pageN);
         return new SendPage<ComicList>(page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages(),
-                ComicMapper.INSTANCE.comicsToComicsList(page.getContent()), page.getSort());
+                                       ComicMapper.INSTANCE.comicsToComicsList(page.getContent()), page.getSort());
     }
 
     @GetMapping(path = "getLatestComics/{page}")
     public SendPage<ComicView> getLatestComics(@PathVariable("page") Integer page) {
         Page<Comic> comics = comicService.getLatestComics(page);
         return new SendPage<>(comics.getNumber(), comics.getSize(), comics.getTotalElements(), comics.getTotalPages(),
-                ComicMapper.INSTANCE.comicsToComicsList(comics.getContent()), comics.getSort());
+                              ComicMapper.INSTANCE.comicsToComicsList(comics.getContent()), comics.getSort());
     }
 
     @PostMapping(path = "{id}/uploadChapter", headers = { "content-type=multipart/mixed",
-            "content-type=multipart/form-data" })
-    @Transactional
-    public void uploadChapter(@PathVariable("id") Long id, @ModelAttribute ChapterUpload chapterUpload,
-            @RequestPart("chapterZip") MultipartFile chapterZip) {
+                                                         "content-type=multipart/form-data" })
+                                                         @Transactional
+                                                         public void uploadChapter(@PathVariable("id") Long id, @ModelAttribute ChapterUpload chapterUpload,
+                                                                                   @RequestPart("chapterZip") MultipartFile chapterZip) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
         Optional<User> user = userService.findByName(username);
@@ -123,16 +126,16 @@ public class ComicController {
                 try {
                     if (chapterZip.getContentType().equals(ALLOWEDFILETYPE)) {
                         List<String> imagesPath = this.unzipFile(chapterZip, comi.getName(),
-                                chapterUpload.getNumber());
+                                                                 chapterUpload.getNumber());
                         String finalPath = COMICSPATH + comi.getName() + File.separator + chapterUpload.getNumber();
                         Path path = Paths.get(finalPath);
                         Files.createDirectories(path);
                         this.convertFilesToJPG(imagesPath, finalPath);
                         this.deleteTmpFolder(comi.getName(), chapterUpload.getNumber());
                         String name = chapterUpload.getName().isEmpty() ? "Chapter " + chapterUpload.getNumber()
-                                : chapterUpload.getName();
+                            : chapterUpload.getName();
                         Chapter chapter = new Chapter(chapterUpload.getNumber(), name, Long.valueOf(imagesPath.size()),
-                                us.getName(), comi);
+                                                      us.getName(), comi);
                         chapter = chapterService.addChapter(chapter);
                         comi.getChapters().add(chapter);
                     } else {
@@ -197,12 +200,12 @@ public class ComicController {
 
     @GetMapping("{id}/chapter/{chNumber}/{imgNumber}")
     public ResponseEntity<byte[]> serveChapterImage(@PathVariable("id") Long id,
-            @PathVariable("chNumber") Double chNumber, @PathVariable("imgNumber") Long imgNumber) {
+                                                    @PathVariable("chNumber") Double chNumber, @PathVariable("imgNumber") Long imgNumber) {
         try {
             Optional<Comic> comic = comicService.getComicById(id);
             Path path = Paths.get(
-                    COMICSPATH + comic.get().getName() + File.separator + chNumber + File.separator + imgNumber
-                            + ".jpg");
+                                  COMICSPATH + comic.get().getName() + File.separator + chNumber + File.separator + imgNumber
+                                  + ".jpg");
             byte[] image = Files.readAllBytes(path);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.IMAGE_JPEG);
@@ -313,6 +316,28 @@ public class ComicController {
             } catch (IOException e) {
                 throw new CannotConvertImageException();
             }
+        }
+    }
+
+    private void convertImageToJPG(MultipartFile image, String path) {
+        try {
+            final FileInputStream inputStream = image.getInputStream();
+            final BufferedImage bfImage = ImageIO.read(inputStream);
+            inputStream.close();
+
+            final BufferedImage convertedImage = new BufferedImage(bfImage.getWidth(), bfImage.getHeight(),
+                                                                   BufferedImage.TYPE_INT_RGB);
+            convertedImage.createGraphics().drawImage(bfImage, 0, 0, Color.WHITE, null);
+
+            final FileOutputStream outputStream = new FileOutputStream(path);
+            final boolean canWrite = ImageIO.write(convertedImage, "jpg", outputStream);
+            outputStream.close();
+
+            if (!canWrite) {
+                throw new CannotConvertImageException();
+            }
+        } catch (IOException e) {
+            throw new CannotConvertImageException();
         }
     }
 
