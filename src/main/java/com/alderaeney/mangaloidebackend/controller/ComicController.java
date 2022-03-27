@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import org.apache.tomcat.jni.File;
+import java.net.http.HttpHeaders;
 
 import javax.activation.MimetypesFileTypeMap;
 import javax.imageio.ImageIO;
@@ -110,11 +112,34 @@ public class ComicController {
                               ComicMapper.INSTANCE.comicsToComicsList(comics.getContent()), comics.getSort());
     }
 
+	@GetMapping("{id}/image")
+	public ResponseEntity<byte[]> fetchComicImage(@PathVariable("id") Long id) {
+		Optional<Comic> comic = comicService.getComicById(id);
+		if (comic.isPresent()) {
+			Comic comi = comic.get();
+			String route = COMICSPATH + File.separator + comi.getName() + File.separator + "image.jpg";
+			File file = new File(route);
+			Path path = null;
+			if (file.exists()) {
+				path = Paths.get(route);
+				byte[] image = Files.readAllBytes(path);
+				HttpHeaders headers = new HttpHeaders();
+				headers.setContentType(MediaType.IMAGE_JPEG);
+				headers.setContentLength(image.length);
+				return new ResponseEntity(image, headers, HttpStatus.OK);
+			} else {
+				throw new CannotReadImageException();
+			}
+		} else {
+			throw new ComicNotFoundException(id);
+		}
+	}
+
     @PostMapping(path = "{id}/uploadChapter", headers = { "content-type=multipart/mixed",
                                                          "content-type=multipart/form-data" })
-                                                         @Transactional
-                                                         public void uploadChapter(@PathVariable("id") Long id, @ModelAttribute ChapterUpload chapterUpload,
-                                                                                   @RequestPart("chapterZip") MultipartFile chapterZip) {
+    @Transactional
+    public void uploadChapter(@PathVariable("id") Long id, @ModelAttribute ChapterUpload chapterUpload,
+                              @RequestPart("chapterZip") MultipartFile chapterZip) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
         Optional<User> user = userService.findByName(username);
