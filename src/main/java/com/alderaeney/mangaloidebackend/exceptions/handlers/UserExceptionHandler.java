@@ -35,6 +35,6 @@ public class UserExceptionHandler {
 
     @ExceptionHandler(value = FileTooBigException.class)
     public ResponseEntity<Object> fileTooBigException(FileTooBigException exception) {
-        return new ResponseEntity<>(exception.msg, HttpStatus.NOT_ACCEPTABLE)
+        return new ResponseEntity<>(exception.msg, HttpStatus.NOT_ACCEPTABLE);
     }
 }

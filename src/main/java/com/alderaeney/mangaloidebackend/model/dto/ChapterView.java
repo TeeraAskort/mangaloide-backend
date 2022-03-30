@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class ChapterView implements Serializable {
     private static final long serialVersionUID = 1L;
     private Long id;
-    private Double number;
+    private Double chNumber;
     private String name;
     private Long pages;
     private String usernameUploader;

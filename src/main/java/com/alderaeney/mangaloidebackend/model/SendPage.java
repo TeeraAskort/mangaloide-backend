@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SendPage<T> {
-    int number;
+    int num;
     int size;
     long totalElements;
     int totalPages;

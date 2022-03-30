@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -120,7 +121,7 @@ public class UserController {
     }
 
     @PostMapping(path = "uploadImage", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public User uploadUserImage(@RequestParam('file') MultipartFile image) {
+    public User uploadUserImage(@RequestParam("file") MultipartFile image) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
         Optional<User> user = userService.findByName(username);
@@ -129,14 +130,14 @@ public class UserController {
             User us = user.get();
             boolean found = false;
             try {
-                for(String type: ALLOWEDIMAGETYPES) {
+                for (String type : ALLOWEDIMAGETYPES) {
                     if (image.getContentType().equals(type)) {
                         found = true;
                         break;
                     }
                 }
             } catch (NullPointerException e) {
-                return new ResponseEntity<>("You haven't provided an image", HttpStatus.NOT_FOUND);
+                throw new RuntimeException("You haven't provided an image");
             }
 
             if (!found) {
@@ -184,7 +185,7 @@ public class UserController {
 
     private void convertImageToJPG(MultipartFile image, String name) {
         try {
-            final FileInputStream inputStream = image.getInputStream();
+            final InputStream inputStream = image.getInputStream();
             final BufferedImage bfImage = ImageIO.read(inputStream);
             inputStream.close();
 
