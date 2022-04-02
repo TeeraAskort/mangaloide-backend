@@ -31,3 +31,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### User Uploads ###
+comics/
+tmp/
+
+### User image uploads ###
+userImages/*
+!userImages/default.jpg
