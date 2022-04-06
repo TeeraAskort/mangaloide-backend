@@ -89,12 +89,18 @@ public class ComicController {
 
     @PostMapping(path = "newComic", headers = { "content-type=multipart/mixed",
             "content-type=multipart/form-data" })
-    public ComicView newComic(@RequestBody NewComic newComic, @RequestPart("image") MultipartFile image) {
-        Comic comic = new Comic(newComic.getName(), newComic.getAuthor(), false, newComic.getNsfw());
-        Comic result = comicService.save(comic);
-        String path = COMICSPATH + File.separator + newComic.getName() + File.separator + "image.jpg";
-        this.convertImageToJPG(image, path);
-        return ComicMapper.INSTANCE.comicToComicView(result);
+    public ComicView newComic(@ModelAttribute NewComic newComic, @RequestPart("image") MultipartFile image) {
+        try {
+            Comic comic = new Comic(newComic.getName(), newComic.getAuthor(), false, newComic.getNsfw());
+            Comic result = comicService.save(comic);
+            String path = COMICSPATH + File.separator + newComic.getName();
+            Files.createDirectories(Paths.get(path));
+            path += File.separator + "image.jpg";
+            this.convertImageToJPG(image, path);
+            return ComicMapper.INSTANCE.comicToComicView(result);
+        } catch (IOException e) {
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
     @GetMapping("search/{name}/{page}")
