@@ -18,5 +18,6 @@ public class ComicView implements Serializable {
     private String name;
     private String author;
     private Boolean nsfw;
+    private String description;
     private List<Chapter> chapters;
 }

@@ -10,5 +10,6 @@ import lombok.NoArgsConstructor;
 public class NewComic {
     private String name;
     private String author;
+    private String description;
     private Boolean nsfw;
 }

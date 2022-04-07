@@ -41,6 +41,9 @@ public class Comic {
     private Boolean finished;
 
     @NonNull
+    private String description;
+
+    @NonNull
     private Boolean nsfw;
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "comic")

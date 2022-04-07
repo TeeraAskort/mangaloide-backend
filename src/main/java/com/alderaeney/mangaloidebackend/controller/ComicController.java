@@ -91,7 +91,8 @@ public class ComicController {
             "content-type=multipart/form-data" })
     public ComicView newComic(@ModelAttribute NewComic newComic, @RequestPart("image") MultipartFile image) {
         try {
-            Comic comic = new Comic(newComic.getName(), newComic.getAuthor(), false, newComic.getNsfw());
+            Comic comic = new Comic(newComic.getName(), newComic.getAuthor(), false, newComic.getDescription(),
+                    newComic.getNsfw());
             Comic result = comicService.save(comic);
             String path = COMICSPATH + File.separator + newComic.getName();
             Files.createDirectories(Paths.get(path));
